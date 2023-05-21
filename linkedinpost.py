@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify
-import requests
+from linkedin import linkedin
 
 app = Flask(__name__)
-
-SHARES_API = "https://api.linkedin.com/v2/shares"
 
 @app.route("/linkedinpost", methods=["POST"])
 def post_on_linkedin():
@@ -23,61 +21,21 @@ def post_on_linkedin():
         return jsonify({"error": "Failed to post content on LinkedIn"}), 500
 
 def post_content_on_linkedin(access_token, title, text, url, preview_image):
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-    }
+    app = linkedin.LinkedInApplication(token=access_token)
 
-    payload = {
-        "author": f"urn:li:person:{access_token}",
-        "lifecycleState": "PUBLISHED",
-        "specificContent": {
-            "com.linkedin.ugc.ShareContent": {
-                "shareCommentary": {
-                    "text": text,
-                },
-                "shareMediaCategory": "ARTICLE",
-                "media": [],
-            },
-        },
-        "visibility": {
-            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-        },
+    content = {
+        "comment": text,
+        "title": title,
+        "submitted-url": url,
     }
-
-    if url:
-        payload["specificContent"]["com.linkedin.ugc.ShareContent"]["shareMediaCategory"] = "ARTICLE"
-        payload["specificContent"]["com.linkedin.ugc.ShareContent"]["media"].append({
-            "status": "READY",
-            "originalUrl": url,
-            "title": {
-                "text": title,
-            },
-        })
 
     if preview_image:
-        image_data = preview_image.read()
-        response = requests.post(
-            "https://api.linkedin.com/v2/assets?action=registerUpload",
-            headers=headers,
-            json={"registerUploadRequest": {"recipes": ["urn:li:digitalmediaRecipe:feedshare-image"]}},
-        )
-        response_data = response.json()
-        asset = response_data.get("value").get("asset")
-        upload_url = response_data.get("value").get("uploadMechanism").get("com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest").get("uploadUrl")
-
-        headers["Content-Type"] = "application/octet-stream"
-        response = requests.put(upload_url, headers=headers, data=image_data)
-        response.raise_for_status()
-
-        payload["specificContent"]["com.linkedin.ugc.ShareContent"]["media"].append({
-            "media": asset,
-        })
+        content["submitted-image-url"] = preview_image
 
     try:
-        response = requests.post(SHARES_API, headers=headers, json=payload)
-        response.raise_for_status()
+        app.submit_share(content)
         return True
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"Error posting content on LinkedIn: {e}")
         return False
 
