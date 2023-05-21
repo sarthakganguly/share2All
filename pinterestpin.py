@@ -3,8 +3,6 @@ from pinterest import Pinterest
 
 app = Flask(__name__)
 
-# access token - pina_AMA5PMAWACOFOAQAGAAOSDRKGLFBTCABACGSPJ4YFTD3N5ORWVP3M5YP2WXEOP7CAM34KDHFQW4W4U5HNA35GLMV377H23AA
-
 @app.route('/pinterestpin', methods=['POST'])
 def pin_to_pinterest():
     url = request.form.get('url')
