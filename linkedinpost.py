@@ -32,6 +32,8 @@ def post_content_on_linkedin(access_token, title, text, url, preview_image):
     if preview_image:
         content["submitted-image-url"] = preview_image
 
+    print(content)
+
     try:
         app.submit_share(content)
         return True
